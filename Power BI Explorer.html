@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PBIX Measure Extractor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 53, 114, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #003572 0%, #0056b3 100%);
+            border-radius: 20px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            margin: 0;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 60px 40px;
+            border: 3px dashed #003572;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+            margin: 30px 0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section:hover {
+            border-color: #0056b3;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 53, 114, 0.15);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .upload-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #003572;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .choose-file-btn {
+            background: linear-gradient(135deg, #003572 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 53, 114, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choose-file-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 53, 114, 0.4);
+        }
+
+        .choose-file-btn:active {
+            transform: translateY(0px);
+        }
+
+        .view-toggle {
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 15px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .view-btn {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .view-btn.active {
+            background: linear-gradient(135deg, #003572 0%, #0056b3 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 53, 114, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .view-btn:hover:not(.active) {
+            background: #e3f2fd;
+            color: #003572;
+        }
+
+        .matrix-view {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .measures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .measures-table th {
+            background: linear-gradient(135deg, #003572 0%, #0056b3 100%);
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+        }
+
+        .measures-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e8f4fd;
+            font-size: 13px;
+            vertical-align: top;
+        }
+
+        .measures-table tr:hover {
+            background: #f8fbff;
+        }
+
+        .measure-row.unused-row {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
+        }
+
+        .measure-row.unused-row:hover {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        }
+
+        .measure-name-cell {
+            font-weight: 600;
+            color: #003572;
+            min-width: 200px;
+        }
+
+        .unused-row .measure-name-cell {
+            color: #d32f2f;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-unused {
+            background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+            color: white;
+        }
+
+        .status-used {
+            background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+            color: white;
+        }
+
+        .count-cell {
+            text-align: center;
+            font-weight: 600;
+            width: 80px;
+            color: #003572;
+        }
+
+        .expression-preview {
+            max-width: 300px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            color: #666;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .expression-preview:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #003572;
+            transform: scale(1.02);
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(211, 47, 47,
+
+ 0.4);
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 25px 20px;
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+            border-radius: 15px;
+            min-width: 120px;
+            box-shadow: 0 8px 25px rgba(0, 53, 114, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 53, 114, 0.2);
+            border-color: #003572;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #003572;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .measure-item {
+            border: 1px solid #e3f2fd;
+            margin: 12px 0;
+            padding: 20px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+            box-shadow: 0 6px 20px rgba(0, 53, 114, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .measure-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 53, 114, 0.15);
+        }
+
+        .measure-item.unused {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
+            border-color: #ffcdd2;
+        }
+
+        .measure-item.circular {
+            background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%);
+            border-color: #ffcc02;
+        }
+
+        .measure-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .measure-toggle {
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            color: #003572;
+            width: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .measure-toggle:hover {
+            color: #0056b3;
+            transform: scale(1.2);
+        }
+
+        .measure-name {
+            font-weight: 600;
+            color: #003572;
+            font-size: 16px;
+        }
+
+        .measure-name.unused {
+            color: #d32f2f;
+        }
+
+        .measure-name.circular {
+            color: #f57c00;
+        }
+
+        .unused-tag {
+            background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dependents-count {
+            background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .dependencies-count {
+            background: linear-gradient(135deg, #512da8 0%, #673ab7 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .measure-expression {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #003572;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .dependencies-section {
+            border-left: 3px dashed #bbdefb;
+            padding-left: 20px;
+            margin-top: 15px;
+        }
+
+        .dependency-tree {
+            padding: 15px;
+        }
+
+        .level-0 {
+            border-left: 4px solid #003572;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f8fbff 100%);
+        }
+
+        .level-1 {
+            border-left: 4px solid #2e7d32;
+        }
+
+        .level-2 {
+            border-left: 4px solid #512da8;
+        }
+
+        .level-3 {
+            border-left: 4px solid #d32f2f;
+        }
+
+        .dax-function {
+            color: #003572;
+            font-weight: bold;
+        }
+
+        .dax-measure {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .dax-table {
+            color: #2e7d32;
+        }
+
+        .download-section {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .download-section button {
+            margin: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #003572 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 53, 114, 0.3);
+        }
+
+        .download-section button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 53, 114, 0.4);
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #003572;
+            font-weight: 500;
+        }
+
+        #error {
+            color: #d32f2f;
+            padding: 15px;
+            border: 2px solid #f44336;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
+            margin: 20px 0;
+        }
+
+        .config-analysis {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e3f2fd;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+            box-shadow: 0 6px 20px rgba(0, 53, 114, 0.08);
+        }
+
+        .config-preview {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e3f2fd;
+        }
+
+        .config-search {
+            margin: 30px 0;
+            padding: 40px;
+            text-align: center;
+            border: 3px dashed #003572;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
+        }
+
+        .config-search button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #512da8 0%, #673ab7 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(81, 45, 168, 0.3);
+        }
+
+        .config-search button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(81, 45, 168, 0.4);
+        }
+
+        .results-section {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .upload-section {
+                padding: 40px 20px;
+            }
+
+            .summary-stats {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .view-toggle {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PBIX File Structure Explorer</h1>
+            <p>Explore the internal structure of Power BI files to understand how measures are stored</p>
+        </div>
+        <div class="upload-section">
+            <div class="upload-icon"> </div>
+            <div class="upload-title">Upload PBIX File</div>
+            <div class="upload-subtitle">Drag and drop your .pbix file here or click to browse</div>
+            <input type="file" id="fileInput" accept=".pbix" style="display: none;" />
+            <button class="choose-file-btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+        </div>
+        <div id="loading" style="display: none;">Extracting measures and expressions...</div>
+        <div id="error" style="display: none;"></div>
+        <div id="results" style="display: none;" class="results-section">
+            <div id="measuresList"></div>
+            <div class="download-section">
+                <button onclick="downloadMeasuresOnly()">Download Measures List Only</button>
+                <button onclick="downloadMeasuresWithExpressions()">Download Measures with Expressions</button>
+                <button onclick="downloadAsJSON()">Download as JSON</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        let extractedMeasures = [];
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.name.toLowerCase().endsWith('.pbix')) {
+                extractMeasures(file);
+            } else {
+                showError('Please select a valid .pbix file');
+            }
+        }
+
+        async function extractMeasures(file) {
+            try {
+                showLoading();
+                hideError();
+                const zip = await JSZip.loadAsync(file);
+                const allMeasures = new Map();
+                const measurePromises = [];
+                zip.forEach((relativePath, zipEntry) => {
+                    if (!zipEntry.dir) {
+                        measurePromises.push(
+                            (async () => {
+                                try {
+                                    let content = '';
+                                    const binaryContent = await zipEntry.async('uint8array');
+                                    if (binaryContent.length >= 2) {
+                                        const bom = (binaryContent[0] << 8) | binaryContent[1];
+                                        if (bom === 0xFEFF) {
+                                            content = new TextDecoder('utf-16be').decode(binaryContent.slice(2));
+                                        } else if (bom === 0xFFFE) {
+                                            content = new TextDecoder('utf-16le').decode(binaryContent.slice(2));
+                                        } else {
+                                            let isUTF16 = true;
+                                            for (let i = 1; i < Math.min(100, binaryContent.length); i += 2) {
+                                                if (binaryContent[i] !== 0) {
+                                                    isUTF16 = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (isUTF16) {
+                                                content = new TextDecoder('utf-16le').decode(binaryContent);
+                                            } else {
+                                                content = new TextDecoder('utf-8').decode(binaryContent);
+                                            }
+                                        }
+                                    } else {
+                                        content = await zipEntry.async('string');
+                                    }
+                                    const measures = extractMeasuresFromContent(content, relativePath);
+                                    measures.forEach(measure => {
+                                        allMeasures.set(measure.name, measure);
+                                    });
+                                } catch (error) {
+                                    console.log(`Error processing ${relativePath}:`, error);
+                                }
+                            })()
+                        );
+                    }
+                });
+                await Promise.all(measurePromises);
+                extractedMeasures = Array.from(allMeasures.values())
+                    .filter(measure => measure.expression && measure.expression.trim().length > 0)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                displayMeasures();
+                hideLoading();
+            } catch (error) {
+                console.error('Error extracting measures:', error);
+                showError('Error extracting measures: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        function extractMeasuresFromContent(content, filePath) {
+            const measures = new Map();
+            try {
+                if (filePath.toLowerCase().includes('.pbiviz.json')) {
+                    return Array.from(measures.values());
+                }
+                const patterns = [
+                    /"Measure\.([^"]+)"/g,
+                    /"Property":"?([^"]+)"/g,
+                    /"Name":"Measure\.([^"]+)"/g,
+                ];
+                patterns.forEach(pattern => {
+                    let match;
+                    while ((match = pattern.exec(content)) !== null) {
+                        const measureName = match[1].trim();
+                        if (measureName && !measures.has(measureName)) {
+                            measures.set(measureName, {
+                                name: measureName,
+                                expression: null,
+                                dependencies: [],
+                                isUsed: false
+                            });
+                        }
+                    }
+                });
+                if (filePath === 'Report/Layout') {
+                    try {
+                        const layoutData = JSON.parse(content);
+                        if (layoutData.sections) {
+                            layoutData.sections.forEach(section => {
+                                if (section.visualContainers) {
+                                    section.visualContainers.forEach(container => {
+                                        if (container.query) {
+                                            try {
+                                                const queryData = JSON.parse(container.query);
+                                                if (queryData.Commands) {
+                                                    queryData.Commands.forEach(command => {
+                                                        if (command.SemanticQueryDataShapeCommand &&
+                                                            command.SemanticQueryDataShapeCommand.Extension &&
+                                                            command.SemanticQueryDataShapeCommand.Extension.Entities) {
+                                                            command.SemanticQueryDataShapeCommand.Extension.Entities.forEach(entity => {
+                                                                if (entity.Measures) {
+                                                                    entity.Measures.forEach(measure => {
+                                                                        if (measure.Name && measure.Expression) {
+                                                                            const dependencies = extractDependencies(measure.Expression);
+                                                                            measures.set(measure.Name, {
+                                                                                name: measure.Name,
+                                                                                expression: measure.Expression,
+                                                                                dependencies: dependencies,
+                                                                                isUsed: true
+                                                                            });
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            } catch (queryParseError) {
+                                                console.log(`Error parsing query JSON:`, queryParseError);
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        if (layoutData.config) {
+                            try {
+                                const configData = JSON.parse(layoutData.config);
+                                findMeasuresInConfig(configData, measures);
+                            } catch (configError) {
+                                console.log(`Error parsing config:`, configError);
+                            }
+                        }
+                    } catch (layoutParseError) {
+                        console.log(`Error parsing Report/Layout JSON:`, layoutParseError);
+                    }
+                }
+            } catch (error) {
+                console.log(`Error extracting measures from ${filePath}:`, error);
+            }
+            return Array.from(measures.values());
+        }
+
+        function findMeasuresInConfig(configObj, measuresMap) {
+            window.lastLoadedConfig = configObj;
+            function searchForMeasures(obj, path = '') {
+                if (Array.isArray(obj)) {
+                    obj.forEach((item, index) => searchForMeasures(item, `${path}[${index}]`));
+                } else if (typeof obj === 'object' && obj !== null) {
+                    if (obj.Name && obj.Expression) {
+                        console.log(`Found measure at path: ${path}`, obj.Name);
+                        const dependencies = extractDependencies(obj.Expression);
+                        const existingMeasure = measuresMap.get(obj.Name);
+                        measuresMap.set(obj.Name, {
+                            name: obj.Name,
+                            expression: obj.Expression,
+                            dependencies: dependencies,
+                            isUsed: existingMeasure ? existingMeasure.isUsed : false,
+                            configPath: path
+                        });
+                    }
+                    if (obj.Measures && Array.isArray(obj.Measures)) {
+                        console.log(`Found Measures array at path: ${path}.Measures with ${obj.Measures.length} items`);
+                        obj.Measures.forEach((measure, index) => {
+                            if (measure.Name && measure.Expression) {
+                                console.log(`Found measure in array: ${measure.Name}`);
+                                const dependencies = extractDependencies(measure.Expression);
+                                const existingMeasure = measuresMap.get(measure.Name);
+                                measuresMap.set(measure.Name, {
+                                    name: measure.Name,
+                                    expression: measure.Expression,
+                                    dependencies: dependencies,
+                                    isUsed: existingMeasure ? existingMeasure.isUsed : false,
+                                    configPath: `${path}.Measures[${index}]`
+                                });
+                            }
+                        });
+                    }
+                    Object.keys(obj).forEach(key => {
+                        if (key.toLowerCase().includes('measure') ||
+                            key.toLowerCase().includes('extension') ||
+                            key.toLowerCase().includes('entities') ||
+                            key.toLowerCase().includes('model')) {
+                            console.log(`Found interesting path: ${path}.${key}`);
+                        }
+                    });
+                    Object.keys(obj).forEach(key => {
+                        searchForMeasures(obj[key], path ? `${path}.${key}` : key);
+                    });
+                }
+            }
+            console.log('Starting config search...');
+            searchForMeasures(configObj);
+            console.log('Config search complete');
+        }
+
+        function extractDependencies(expression) {
+            const dependencies = [];
+            if (!expression) return dependencies;
+            const measurePattern = /\[([^\]]+)\]/g;
+            let match;
+            while ((match = measurePattern.exec(expression)) !== null) {
+                const refMeasure = match[1].trim();
+                if (refMeasure && !dependencies.includes(refMeasure)) {
+                    dependencies.push(refMeasure);
+                }
+            }
+            return dependencies;
+        }
+
+        function displayMeasures() {
+            document.getElementById('results').style.display = 'block';
+            const measuresList = document.getElementById('measuresList');
+            if (extractedMeasures.length > 0) {
+                const measureTree = buildDependencyTree(extractedMeasures);
+                measuresList.innerHTML = `
+                    <p><strong>Found ${extractedMeasures.length} measures with expressions:</strong></p>
+                    <div class="view-toggle">
+                        <button onclick="showConfigView()" class="view-btn active" id="configBtn">All Config Measures</button>
+                        <button onclick="showTableView()" class="view-btn" id="tableBtn">Used Measures</button>
+                        <button onclick="showTreeView()" class="view-btn" id="treeBtn">Tree View</button>
+                    </div>
+                    <div id="configView" class="matrix-view">
+                        ${renderConfigMeasuresView()}
+                    </div>
+                    <div id="tableView" class="matrix-view" style="display: none;">
+                        ${renderMatrixView(measureTree)}
+                    </div>
+                    <div id="treeView" class="dependency-tree" style="display: none;">
+                        ${renderDependencyTree(measureTree)}
+                    </div>
+                `;
+            } else {
+                measuresList.innerHTML = '<p>No measures with expressions found in this PBIX file.</p>';
+            }
+        }
+
+        function showConfigView() {
+            document.getElementById('configView').style.display = 'block';
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('treeView').style.display = 'none';
+            document.getElementById('configBtn').classList.add('active');
+            document.getElementById('tableBtn').classList.remove('active');
+            document.getElementById('treeBtn').classList.remove('active');
+        }
+
+        function showTableView() {
+            document.getElementById('tableView').style.display = 'block';
+            document.getElementById('configView').style.display = 'none';
+            document.getElementById('treeView').style.display = 'none';
+            document.getElementById('tableBtn').classList.add('active');
+            document.getElementById('configBtn').classList.remove('active');
+            document.getElementById('treeBtn').classList.remove('active');
+        }
+
+        function showTreeView() {
+            document.getElementById('tableView').style.display = 'none';
+            document.getElementById('configView').style.display = 'none';
+            document.getElementById('treeView').style.display = 'block';
+            document.getElementById('tableBtn').classList.remove('active');
+            document.getElementById('configBtn').classList.remove('active');
+            document.getElementById('treeBtn').classList.add('active');
+        }
+
+        function renderConfigMeasuresView() {
+            let allConfigMeasures = [];
+            if (window.lastLoadedConfig && window.lastLoadedConfig.modelExtensions) {
+                window.lastLoadedConfig.modelExtensions.forEach(extension => {
+                    if (extension.entities) {
+                        extension.entities.forEach(entity => {
+                            if (entity.measures) {
+                                entity.measures.forEach(measure => {
+                                    if (measure.name && measure.expression) {
+                                        const isUsed = extractedMeasures.some(m => m.name === measure.name && m.isUsed);
+                                        allConfigMeasures.push({
+                                            name: measure.name,
+                                            expression: measure.expression,
+                                            dataType: measure.dataType,
+                                            hidden: measure.hidden,
+                                            isUsed: isUsed,
+                                            references: measure.references?.measures || []
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+            if (allConfigMeasures.length === 0) {
+                return `
+                    <div class="config-search">
+                        <p><strong>No config measures found.</strong></p>
+                        <p>Make sure to load a PBIX file first.</p>
+                    </div>
+                `;
+            }
+            allConfigMeasures.sort((a, b) => {
+                if (a.isUsed !== b.isUsed) {
+                    return a.isUsed ? 1 : -1;
+                }
+                return a.name.localeCompare(b.name);
+            });
+            let html = `
+                <h3>All Measures from Config (${allConfigMeasures.length} total)</h3>
+                <table class="measures-table">
+                    <thead>
+                        <tr>
+                            <th>Measure Name</th>
+                            <th>Usage Status</th>
+                            <th>Hidden</th>
+                            <th>Data Type</th>
+                            <th>References</th>
+                            <th>Expression Preview</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            allConfigMeasures.forEach(measure => {
+                const statusClass = measure.isUsed ? 'status-used' : 'status-unused';
+                const statusText = measure.isUsed ? 'IN USE' : 'UNUSED';
+                const hiddenText = measure.hidden ? 'Yes' : 'No';
+                const dataTypeText = measure.dataType === 3 ? 'Text' : measure.dataType === 1 ? 'Number' : measure.dataType;
+                const expressionPreview = measure.expression
+                    ? measure.expression.substring(0, 80) + (measure.expression.length > 80 ? '...' : '')
+                    : 'No expression';
+                const referencesCount = measure.references.length;
+                html += `
+                    <tr class="measure-row ${!measure.isUsed ? 'unused-row' : ''}">
+                        <td class="measure-name-cell">
+                            <strong>${measure.name}</strong>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td class="count-cell">${hiddenText}</td>
+                        <td class="count-cell">${dataTypeText}</td>
+                        <td class="count-cell">${referencesCount}</td>
+                        <td class="expression-preview" onclick="showFullExpression('${measure.name.replace(/'/g, "\\'")}', \`${measure.expression?.replace(/`/g, '\\`') || ''}\`)">
+                            ${expressionPreview}
+                        </td>
+                        <td>
+                            ${!measure.isUsed ? '<button class="delete-btn" onclick="markForDeletion(\'' + measure.name.replace(/'/g, "\\'") + '\')">Mark for Deletion</button>' : '<span class="in-use-label">Active</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `
+                    </tbody>
+                </table>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${allConfigMeasures.length}</span>
+                        <span class="stat-label">Total in Config</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${allConfigMeasures.filter(m => !m.isUsed).length}</span>
+                        <span class="stat-label">Unused</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${allConfigMeasures.filter(m => m.isUsed).length}</span>
+                        <span class="stat-label">Used in Visuals</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${allConfigMeasures.filter(m => m.hidden).length}</span>
+                        <span class="stat-label">Hidden</span>
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        function renderMatrixView({ measureMap, rootMeasures }) {
+            const usedMeasures = Array.from(measureMap.values()).filter(m => m.isUsed);
+            let html = `
+                <h3>Used Measures Only (${usedMeasures.length} measures)</h3>
+                <table class="measures-table">
+                    <thead>
+                        <tr>
+                            <th>Measure Name</th>
+                            <th>Used By</th>
+                            <th>Depends On</th>
+                            <th>Expression Preview</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            usedMeasures.forEach(measure => {
+                const validDependencies = measure.dependencies.filter(depName => measureMap.has(depName));
+                const expressionPreview = measure.expression
+                    ? measure.expression.substring(0, 100) + (measure.expression.length > 100 ? '...' : '')
+                    : 'No expression';
+                html += `
+                    <tr class="measure-row">
+                        <td class="measure-name-cell">
+                            <strong>${measure.name}</strong>
+                        </td>
+                        <td class="count-cell">${measure.dependents.length}</td>
+                        <td class="count-cell">${validDependencies.length}</td>
+                        <td class="expression-preview" onclick="showFullExpression('${measure.name.replace(/'/g, "\\'")}', \`${measure.expression?.replace(/`/g, '\\`') || ''}\`)">
+                            ${expressionPreview}
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `
+                    </tbody>
+                </table>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${usedMeasures.length}</span>
+                        <span class="stat-label">Used Measures</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${usedMeasures.filter(m => m.dependents.length > 0).length}</span>
+                        <span class="stat-label">Have Dependents</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${usedMeasures.filter(m => m.dependencies.length > 0).length}</span>
+                        <span class="stat-label">Have Dependencies</span>
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        function showFullExpression(measureName, expression) {
+            alert(`${measureName}:\n\n${expression}`);
+        }
+
+        function markForDeletion(measureName) {
+            if (confirm(`Mark "${measureName}" for deletion?\n\nThis measure appears to be unused.`)) {
+                alert(`"${measureName}" marked for deletion.`);
+            }
+        }
+
+        function buildDependencyTree(measures) {
+            const measureMap = new Map();
+            const rootMeasures = [];
+            measures.forEach(measure => {
+                measureMap.set(measure.name, {
+                    ...measure,
+                    dependents: []
+                });
+            });
+            measures.forEach(measure => {
+                const measureObj = measureMap.get(measure.name);
+                measure.dependencies.forEach(depName => {
+                    const dependency = measureMap.get(depName);
+                    if (dependency) {
+                        dependency.dependents.push(measure.name);
+                    }
+                });
+            });
+            measures.forEach(measure => {
+                const measureObj = measureMap.get(measure.name);
+                if (measureObj.isUsed || measureObj.dependents.length === 0) {
+                    rootMeasures.push(measureObj);
+                }
+            });
+            return { measureMap, rootMeasures };
+        }
+
+        function renderDependencyTree({ measureMap, rootMeasures }) {
+            function renderMeasure(measure, level = 0, visited = new Set()) {
+                if (visited.has(measure.name)) {
+                    return `<div class="measure-item level-${level} circular" style="margin-left: ${level * 20}px;">
+                        <span class="measure-name circular">↻ ${measure.name} (circular reference)</span>
+                    </div>`;
+                }
+                visited.add(measure.name);
+                const isUnused = measure.dependents.length === 0 && level > 0;
+                const itemClass = isUnused ? 'measure-item unused' : 'measure-item';
+                const validDependencies = measure.dependencies.filter(depName => measureMap.has(depName));
+                let html = `<div class="${itemClass} level-${level}" style="margin-left: ${level * 20}px;">
+                    <div class="measure-header">
+                        <span class="measure-toggle" onclick="toggleExpression(this)">▼</span>
+                        <span class="measure-name ${isUnused ? 'unused' : ''}">${measure.name}</span>
+                        ${isUnused ? '<span class="unused-tag">UNUSED</span>' : ''}
+                        ${measure.dependents.length > 0 ? `<span class="dependents-count">Used by ${measure.dependents.length}</span>` : ''}
+                        ${validDependencies.length > 0 ? `<span class="dependencies-count">Depends on ${validDependencies.length}</span>` : ''}
+                    </div>
+                    <div class="measure-expression">
+                        ${formatExpression(measure.expression)}
+                    </div>
+                </div>`;
+                if (validDependencies.length > 0) {
+                    html += `<div class="dependencies-section" style="margin-left: ${(level + 1) * 20}px;">`;
+                    validDependencies.forEach(depName => {
+                        const dependency = measureMap.get(depName);
+                        if (dependency) {
+                            html += renderMeasure(dependency, level + 1, new Set(visited));
+                        }
+                    });
+                    html += `</div>`;
+                }
+                visited.delete(measure.name);
+                return html;
+            }
+            return rootMeasures.map(measure => renderMeasure(measure)).join('');
+        }
+
+        function formatExpression(expression) {
+            if (!expression) return 'No expression found';
+            let formatted = expression
+                .replace(/\b(CALCULATE|SUM|COUNT|AVERAGE|MAX|MIN|IF|SWITCH|VAR|RETURN)\b/g, '<span class="dax-function">$1</span>')
+                .replace(/\[([^\]]+)\]/g, '<span class="dax-measure">[$1]</span>')
+                .replace(/'([^']+)'/g, '<span class="dax-table">\'$1\'</span>');
+            return formatted;
+        }
+
+        function toggleExpression(element) {
+            const expressionDiv = element.parentElement.nextElementSibling;
+            if (expressionDiv.style.display === 'none') {
+                expressionDiv.style.display = 'block';
+                element.textContent = '▼';
+            } else {
+                expressionDiv.style.display = 'none';
+                element.textContent = ' ';
+            }
+        }
+
+        function downloadMeasuresOnly() {
+            const content = extractedMeasures.length > 0
+                ? extractedMeasures.map(m => m.name).join('\n')
+                : 'No measures found';
+            downloadFile(content, 'pbix_measures_list.txt', 'text/plain');
+        }
+
+        function downloadMeasuresWithExpressions() {
+            let content = '';
+            if (extractedMeasures.length > 0) {
+                const { measureMap, rootMeasures } = buildDependencyTree(extractedMeasures);
+                content += "PBIX MEASURES DEPENDENCY TREE\n";
+                content += "=".repeat(50) + "\n\n";
+                function exportMeasure(measure, level = 0, visited = new Set()) {
+                    if (visited.has(measure.name)) {
+                        return `${"  ".repeat(level)}${measure.name} (circular reference)\n`;
+                    }
+                    visited.add(measure.name);
+                    const indent = "  ".repeat(level);
+                    const isUnused = measure.dependents.length === 0 && level > 0;
+                    const unusedTag = isUnused ? " [POTENTIALLY UNUSED]" : "";
+                    const usageInfo = measure.dependents.length > 0 ? ` (used by ${measure.dependents.length} measures)` : "";
+                    let result = `${indent}${measure.name}${unusedTag}${usageInfo}\n`;
+                    result += `${indent}Expression: ${measure.expression || 'No expression found'}\n`;
+                    if (measure.dependencies.length > 0) {
+                        result += `${indent}Dependencies: [${measure.dependencies.join(', ')}]\n`;
+                    }
+                    result += "\n";
+                    measure.dependencies.forEach(depName => {
+                        const dependency = measureMap.get(depName);
+                        if (dependency) {
+                            result += exportMeasure(dependency, level + 1, new Set(visited));
+                        } else {
+                            result += `${indent}  ${depName} (not found)\n\n`;
+                        }
+                    });
+                    visited.delete(measure.name);
+                    return result;
+                }
+                content += rootMeasures.map(measure => exportMeasure(measure)).join('');
+                const unusedMeasures = extractedMeasures.filter(m => {
+                    const measure = measureMap.get(m.name);
+                    return measure.dependents.length === 0;
+                });
+                if (unusedMeasures.length > 0) {
+                    content += "\n" + "=".repeat(50) + "\n";
+                    content += "POTENTIALLY UNUSED MEASURES\n";
+                    content += "=".repeat(50) + "\n\n";
+                    unusedMeasures.forEach(measure => {
+                        content += `${measure.name}\n`;
+                        content += `Expression: ${measure.expression || 'No expression found'}\n\n`;
+                    });
+                }
+            } else {
+                content = 'No measures found';
+            }
+            downloadFile(content, 'pbix_measures_dependency_tree.txt', 'text/plain');
+        }
+
+        function downloadAsJSON() {
+            const content = JSON.stringify(extractedMeasures, null, 2);
+            downloadFile(content, 'pbix_measures.json', 'application/json');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
