@@ -21,11 +21,11 @@ Safely cleaning measures isn't simple because:
 
 A browser-based tool designed specifically for Power BI measure management:
 
-✔ **Works with PBIX files** (Live Connection)  
-✔ **Zero installation** – runs entirely in your browser  
-✔ **Comprehensive dependency analysis** to identify unused measures  
-✔ **Visual relationship mapping** between measures  
-✔ **100% client-side** – your data never leaves your computer  
+ **Works with PBIX files** (Live Connection)  
+ **Zero installation** – runs entirely in your browser  
+ **Comprehensive dependency analysis** to identify unused measures  
+ **Visual relationship mapping** between measures  
+ **100% client-side** – your data never leaves your computer  
 
 ## Key Features
 
@@ -36,9 +36,9 @@ A browser-based tool designed specifically for Power BI measure management:
 
 ## Why This Matters
 
-🏢 **Enterprise models**: Safely clean up legacy measures  
-⚡ **Performance**: Reduce overhead from unused calculations  
-🤝 **Collaboration**: Document complex dependencies for your team  
+**Enterprise models**: Safely clean up legacy measures  
+**Performance**: Reduce overhead from unused calculations  
+**Collaboration**: Document complex dependencies for your team  
 
 ## Disclaimer
 This tool is provided "as-is" without warranty of any kind. Users assume all risk associated with its use. The author disclaims all liability for any damages or issues arising from the use of this.
